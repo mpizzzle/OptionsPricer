@@ -4,16 +4,13 @@
 # wrap in a library somehow, make it easy to use
 # extended Greeks?
 
-# find your own libm.so..
-erf ← "/usr/lib/libm.so.6" •FFI "f64"‿"erf"‿"f64"
-
 # https://en.wikipedia.org/wiki/Average_absolute_deviation#Relation_to_standard_deviation
 # inverse of average absolute deviation
 iaad ← 1 ÷ √2 × π
 
 # (Standard Normal) Cumulative Distribution Function
 # https://en.wikipedia.org/wiki/Normal_distribution#Error_function
-CDF ← 0.5 × 1 + ·Erf∘⥊ ÷⟜(√2)
+CDF ← 0.5 × 1 + ·•math.Erf ÷⟜(√2)
 
 # Probability Density Function
 # https://en.wikipedia.org/wiki/Normal_distribution#Standard_normal_distribution
