@@ -1,11 +1,11 @@
 #!/usr/local/bin/bqn
 
 # TODO:
-# wrap in a library somehow, make it easy to use
+# wrap in a library, make it easy to use
 # extended Greeks?
 
-# https://en.wikipedia.org/wiki/Average_absolute_deviation#Relation_to_standard_deviation
 # inverse of average absolute deviation
+# https://en.wikipedia.org/wiki/Average_absolute_deviation#Relation_to_standard_deviation
 iaad ← 1 ÷ √2 × π
 
 # (Standard Normal) Cumulative Distribution Function
@@ -16,31 +16,32 @@ CDF ← 0.5 × 1 + ·•math.Erf ÷⟜(√2)
 # https://en.wikipedia.org/wiki/Normal_distribution#Standard_normal_distribution
 PDF ← iaad × ·⋆ 2 ÷˜ ¯1 × ⋆⟜2
 
-# https://en.wikipedia.org/wiki/Black–Scholes_model#The_Options_Greeks
-# https://en.wikipedia.org/wiki/Greeks_(finance)#Formulae_for_European_option_Greeks
+# Applies the Black-Scholes model for finding the theoretical fair value of an option.
 #
-# inputs
+# inputs:
 # S - price of underlying asset (at time t)
 # K - strike price
 # τ - time until contract maturity (T - t) in years
 # σ - volatility of underlying asset
 # r - interest rate
 # c - 0 for call, 1 for put
-
+#
 # outputs an array of:
-# Delta (Δ) - sensitivity of the option's value with respect to the asset price.
+# Delta  (Δ) - sensitivity of the option's value
+#   with respect to the asset price.
+# Gamma  (Γ) - sensitivity of Δ
+#   with respect to the asset price.
+# Vega   (𝜈) - sensitivity of the option's value
+#   with respect to volatility.
+# Theta  (Θ) - rate at which the option loses value
+#   with respect to time.
+# Rho    (ρ) - sensitivity of the option's value
+#   with respect to interest rate.
+# Lambda (λ) - percentage change in option's value
+#   with respect to the asset price.
+# Value  (V) - theoretical fair value of the option.
 #
-# Gamma (Γ) - sensitivity of delta (Δ) with respect to the asset price.
-#
-# Vega (𝜈) - sensitivity of the option's value with respect to volatility.
-#
-# Theta (Θ) - the rate at which the option loses value with respect to time.
-#
-# Rho (ρ) - sensitivity of the option's value with respect interest rate.
-#
-# Lambda (λ) - % change in option's value with respect to the asset price.
-#
-# Value (V) - theoretical fair value of the option.
+# https://en.wikipedia.org/wiki/Black–Scholes_model#The_Options_Greeks
 
 Greeks ← {
   s‿k‿t‿v‿r‿c ← 𝕩
@@ -74,66 +75,71 @@ Greeks ← {
   delta‿gamma‿vega‿theta‿rho‿lambda‿value
 }
 
-# https://en.wikipedia.org/wiki/Black–Scholes_model#Black–Scholes_equation
-#
-# satisfies Black-Scholes for theoretical fair option value
-# as a function of Δ, Γ, 𝜈, S, r and σ.
-EquationValue ← {
-  delta‿gamma‿theta‿s‿r‿v ← 𝕩
-
-  r ÷˜ (r × s × delta) + theta + 0.5 × gamma × v ×○(⋆⟜2) s
-}
-
-# returns value (V) ⋈ vega (𝜈), for calculating IV via iterative search.
-#
-# S - price of underlying asset (at time t)
-# K - strike price
-# τ - time until contract maturity (T - t) in years
-# σ - volatility of underlying asset
-# r - interest rate
-# c - 0 for call, 1 for put
-ModelValue ← {
-  s‿k‿t‿v‿r‿c ← 𝕩
-
-  sign ← ¯1 × 1 -˜ 2 × c
-  d ← (⋆⁼ s ÷ k) + (r + 2 ÷˜ v ⋆ 2) × t
-  cdfd1‿cdfd2 ← CDF¨ d (÷⋈sign×÷-⊢) v × √t
-
-  val ← (s × cdfd1 - c) - k × sign × cdfd2 × ⋆ ¯1 × r × t
-  vega ← (PDF d ÷ v × √t) × s × √t
-  val‿vega
-}
-
-# https://en.wikipedia.org/wiki/Implied_volatility#Solving_the_inverse_pricing_model_function
 # Solving for IV does not have a closed form, so we iterate on the Black-Scholes model by
-# tweaking σ until the output theoretical value matches the known option value.
+# tweaking σ until the output theoretical value matches the known option market value.
+# https://en.wikipedia.org/wiki/Implied_volatility#Solving_the_inverse_pricing_model_function
 #
-# https://en.wikipedia.org/wiki/Newton's_method
 # We do this via Newton-Raphson, i.e.
 # σₙ₊₁ = σₙ - (V_model - V_market) / 𝜈
+# https://en.wikipedia.org/wiki/Newton's_method
 #
+# inputs:
 # S - price of underlying asset (at time t)
 # K - strike price
 # τ - time until contract maturity (T - t) in years
 # σ - initial guess at volatility of underlying asset (is this needed?)
 # r - interest rate
 # c - 0 for call, 1 for put
-# m - the actual market value of the option
-# v - theoretical option (probably don't need this)
-NR ← {
+# m - actual market value of the option
+# v - theoretical fair value of the option
+#
+# outputs:
+# IV - implied volatility that satisfies the Black-Scholes equation
+#   for the option's actual market value.
+ImpliedVolatility ← 3 ⊑ {
   s‿k‿t‿v‿r‿c‿m‿q ← 𝕩
 
-  val‿vega ← ModelValue s‿k‿t‿v‿r‿c
+  sign ← ¯1 × 1 -˜ 2 × c
+  d ← (⋆⁼ s ÷ k) + (r + 2 ÷˜ v ⋆ 2) × t
+  d1‿d2 ← d (÷(⊣⋈-)⊢) v × √t
+
+  cdfd2 ← CDF sign × d2
+  delta ← c -˜ CDF d1
+  val ← (s × delta) - k × sign × cdfd2 × ⋆ ¯1 × r × t
+  vega ← (PDF d2) × s × √t
 
   s‿k‿t‿(v - vega ÷˜ val - m)‿r‿c‿m‿val
-} •_while_ (0 ≠·-´¯2⊸↑)
+} •_while_ (1e¯10 < ·|∘-´ ¯2⊸↑)
 
-Volatility ← 3 ⊑ NR
+# S - price of underlying asset (at time t)
+# K - strike price
+# τ - time until contract maturity (T - t) in years
+# σ - volatility of underlying asset
+# r - interest rate
+# c - 0 for call, 1 for put
+# m - actual market value of the option
+inputs ← 100‿100‿1‿0.20‿0.05‿0‿10
 
-s‿k‿t‿v‿r‿c ← 100‿100‿1‿0.20‿0.05‿0
+•Show ⍉ ⟨
+  "underlying price (Sₜ)",
+  "strike price (K)",
+  "time until maturity (T - t)",
+  "Estimated Volatility (σ)",
+  "Interest Rate (r)",
+  "Call or Put (0 ∨ 1)",
+  "Market Value (m)"
+⟩ ≍ inputs
 
-de‿ga‿ve‿th‿rh‿la‿val ← Greeks s‿k‿t‿v‿r‿c
+outputs ← Greeks ¯1 ↓ inputs
+iv ← ImpliedVolatility inputs ∾ ¯1 ⊑ outputs
 
-Volatility s‿k‿t‿v‿r‿c‿10‿val
-
-•Show val ⋈ EquationValue de‿ga‿th‿s‿r‿v
+•Show ⍉ ⟨
+  "Delta (Δ)",
+  "Gamma (Γ)",
+  "Vega (𝜈)",
+  "Theta (Θ)",
+  "Rho (ρ)",
+  "Lambda (λ)",
+  "Theoretical Value (V)",
+  "Implied Volatility (IV)"
+⟩ ≍ outputs ∾ iv
