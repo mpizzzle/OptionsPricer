@@ -43,7 +43,7 @@ PDF ← iaad × ·⋆ 2 ÷˜ ¯1 × ⋆⟜2
 #
 # https://en.wikipedia.org/wiki/Black–Scholes_model#The_Options_Greeks
 
-Greeks ← {
+BlackScholes ← {
   s‿k‿t‿v‿r‿c ← 𝕩
 
   # these are easier to interpret concretely after applying CDF (Φ)
@@ -91,25 +91,16 @@ Greeks ← {
 # r - interest rate
 # c - 0 for call, 1 for put
 # m - actual market value of the option
-# v - theoretical fair value of the option
 #
 # outputs:
 # IV - implied volatility that satisfies the Black-Scholes equation
 #   for the option's actual market value.
-ImpliedVolatility ← 3 ⊑ {
-  s‿k‿t‿v‿r‿c‿m‿q ← 𝕩
 
-  sign ← ¯1 × 1 -˜ 2 × c
-  d ← (⋆⁼ s ÷ k) + (r + 2 ÷˜ v ⋆ 2) × t
-  d1‿d2 ← d (÷(⊣⋈-)⊢) v × √t
-
-  cdfd2 ← CDF sign × d2
-  delta ← c -˜ CDF d1
-  val ← (s × delta) - k × sign × cdfd2 × ⋆ ¯1 × r × t
-  vega ← (PDF d2) × s × √t
-
-  s‿k‿t‿(v - vega ÷˜ val - m)‿r‿c‿m‿val
-} •_while_ (1e¯10 < ·|∘-´ ¯2⊸↑)
+ImpliedVolatility ← 3 ⊑ ·{
+  v‿m ← 3‿6 ⊏ 𝕩
+  val‿vega ← ¯1‿2 ⊏ BlackScholes ¯2 ↓ 𝕩
+  (val ⋈˜ v - vega ÷˜ val - m)⌾(3‿7⊸⊏) 𝕩
+} •_while_ (1e¯10 < ·|∘-´ ¯2⊸↑) ∾⟜0
 
 # S - price of underlying asset (at time t)
 # K - strike price
@@ -130,8 +121,8 @@ inputs ← 100‿100‿1‿0.20‿0.05‿0‿10
   "Market Value (m)"
 ⟩ ≍ inputs
 
-outputs ← Greeks ¯1 ↓ inputs
-iv ← ImpliedVolatility inputs ∾ ¯1 ⊑ outputs
+outputs ← BlackScholes ¯1 ↓ inputs
+iv ← ImpliedVolatility inputs
 
 •Show ⍉ ⟨
   "Delta (Δ)",
