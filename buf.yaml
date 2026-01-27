@@ -1,0 +1,4 @@
+# buf.yaml - Defines your API module and dependencies
+version: v2
+modules:
+  - path: proto

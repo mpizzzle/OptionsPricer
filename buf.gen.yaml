@@ -1,0 +1,14 @@
+# buf.gen.yaml - Configures code generation
+version: v2
+managed:
+  enabled: true
+  # override:
+  #   - file_option: java_package_prefix
+  #     value: com.options.pricer
+plugins:
+  # Generate Java code
+  - remote: buf.build/protocolbuffers/java
+    out: src/gen/java
+  # Generate gRPC Java stubs
+  - remote: buf.build/grpc/java
+    out: src/gen/java

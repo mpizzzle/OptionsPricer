@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package options.pricer.v1;
+
+option java_package = "com.options.pricer.api.v1";
+option java_multiple_files = true;
+option java_outer_classname = "OptionsPricerProto";
+
+// Service definition for Options Pricing API
+service OptionsPricerService {
+  // Calculate option price and Greeks using Black-Scholes model
+  rpc CalculateBlackScholesPrice(BlackScholesRequest) returns (BlackScholesResponse);
+
+  // Calculate implied volatility using Newton-Raphson method
+  rpc CalculateImpliedVolatility(ImpliedVolatilityRequest) returns (ImpliedVolatilityResponse);
+}
+
+// Request message for Black-Scholes pricing
+message BlackScholesRequest {
+  // Current price of the underlying asset (S)
+  double spot_price = 1;
+
+  // Strike price of the option (K)
+  double strike_price = 2;
+
+  // Time until contract maturity in years (T)
+  double time_to_maturity = 3;
+
+  // Annualized volatility of the underlying asset (σ)
+  double volatility = 4;
+
+  // Annualized risk-free interest rate (r)
+  double risk_free_rate = 5;
+
+  // Option type: 0 = CALL, 1 = PUT
+  OptionType option_type = 6;
+}
+
+// Response message for Black-Scholes pricing
+message BlackScholesResponse {
+  // Theoretical option price
+  double theoretical_value = 1;
+
+  // Intrinsic value of the option
+  double intrinsic_value = 2;
+
+  // Time value (theoretical - intrinsic)
+  double time_value = 3;
+
+  // Greeks
+  double delta = 4;
+  double gamma = 5;
+  double theta = 6;
+  double vega = 7;
+  double rho = 8;
+
+  // Leverage/elasticity
+  double lambda = 9;
+}
+
+// Request message for implied volatility calculation
+message ImpliedVolatilityRequest {
+  // Current price of the underlying asset (S)
+  double spot_price = 1;
+
+  // Strike price of the option (K)
+  double strike_price = 2;
+
+  // Time until contract maturity in years (T)
+  double time_to_maturity = 3;
+
+  // Annualized risk-free interest rate (r)
+  double risk_free_rate = 4;
+
+  // Option type: 0 = CALL, 1 = PUT
+  OptionType option_type = 5;
+
+  // Actual market price of the option
+  double market_price = 6;
+
+  // Optional: Initial volatility guess for Newton-Raphson (defaults to 0.20)
+  optional double initial_guess = 7;
+
+  // Optional: Maximum iterations for convergence (defaults to 100)
+  optional int32 max_iterations = 8;
+
+  // Optional: Convergence tolerance (defaults to 0.0001)
+  optional double tolerance = 9;
+}
+
+// Response message for implied volatility calculation
+message ImpliedVolatilityResponse {
+  // Calculated implied volatility
+  double implied_volatility = 1;
+
+  // Number of iterations required for convergence
+  int32 iterations = 2;
+
+  // Whether the algorithm converged successfully
+  bool converged = 3;
+
+  // Final pricing error at convergence
+  double final_error = 4;
+}
+
+// Enum for option type
+enum OptionType {
+  OPTION_TYPE_UNSPECIFIED = 0;
+  CALL = 1;
+  PUT = 2;
+}
