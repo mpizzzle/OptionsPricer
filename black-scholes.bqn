@@ -6,7 +6,7 @@
 
 # inverse of average absolute deviation
 # https://en.wikipedia.org/wiki/Average_absolute_deviation#Relation_to_standard_deviation
-iaad ← 1 ÷ √2 × π
+iaad ← ÷√2 × π
 
 # (Standard Normal) Cumulative Distribution Function
 # https://en.wikipedia.org/wiki/Normal_distribution#Error_function
@@ -87,7 +87,6 @@ BlackScholes ← {
 # S - price of underlying asset (at time t)
 # K - strike price
 # τ - time until contract maturity (T - t) in years
-# σ - initial guess at volatility of underlying asset (is this needed?)
 # r - interest rate
 # c - 0 for call, 1 for put
 # m - actual market value of the option
@@ -95,12 +94,23 @@ BlackScholes ← {
 # outputs:
 # IV - implied volatility that satisfies the Black-Scholes equation
 #   for the option's actual market value.
+ImpliedVolatility ← {
+  s‿k‿t‿r‿c‿m ← 𝕩
 
-ImpliedVolatility ← 3 ⊑ ·{
-  v‿m ← 3‿6 ⊏ 𝕩
-  val‿vega ← ¯1‿2 ⊏ BlackScholes ¯2 ↓ 𝕩
-  (val ⋈˜ v - vega ÷˜ val - m)⌾(3‿7⊸⊏) 𝕩
-} •_while_ (1e¯10 < ·|∘-´ ¯2⊸↑) ∾⟜0
+  # using Brenner-Subrahmanyam approximation for initial guess of volatility
+  # σ ≈ (C/S) x (1/0.398 √t).
+  # https://www.jstor.org/stable/4479152 equation (3).
+  # this initial guess is more accurate for at-the-money options (apparently)
+  init ← m ÷ iaad × s × √t
+
+  Iterate ← {
+    vol‿market ← 3‿6 ⊏ 𝕩
+    val‿vega ← ¯1‿2 ⊏ BlackScholes ¯2 ↓ 𝕩
+    (val ⋈˜ vol - vega ÷˜ val - market)⌾(3‿7⊸⊏) 𝕩
+  }
+
+  3 ⊑ Iterate •_while_ (1e¯10 < ·|∘-´ ¯2⊸↑) ∾⟜0 s‿k‿t‿init‿r‿c‿m
+}
 
 # S - price of underlying asset (at time t)
 # K - strike price
@@ -109,7 +119,7 @@ ImpliedVolatility ← 3 ⊑ ·{
 # r - interest rate
 # c - 0 for call, 1 for put
 # m - actual market value of the option
-inputs ← 100‿100‿1‿0.20‿0.05‿0‿10
+s‿k‿t‿v‿r‿c‿m ← 100‿100‿1‿0.20‿0.05‿0‿10
 
 •Show ⍉ ⟨
   "underlying price (Sₜ)",
@@ -121,8 +131,8 @@ inputs ← 100‿100‿1‿0.20‿0.05‿0‿10
   "Market Value (m)"
 ⟩ ≍ inputs
 
-outputs ← BlackScholes ¯1 ↓ inputs
-iv ← ImpliedVolatility inputs
+outputs ← BlackScholes s‿k‿t‿v‿r‿c
+iv ← ImpliedVolatility s‿k‿t‿r‿c‿m
 
 •Show ⍉ ⟨
   "Delta (Δ)",
